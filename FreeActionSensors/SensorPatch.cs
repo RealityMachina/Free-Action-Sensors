@@ -6,11 +6,14 @@ using Harmony;
 using BattleTech;
 using UnityEngine;
 using System.Reflection;
+using BattleTech.UI;
 
 namespace FreeActionSensors
 {
     public class SensorPatch
     {
+        public static Mech sensorMech;
+        public static bool justScanned;
         public static void Init()
         {
             var harmony = HarmonyInstance.Create("Battletech.realitymachina.FreeSensorLock");
@@ -19,37 +22,18 @@ namespace FreeActionSensors
     }
 
     [HarmonyPatch(typeof(BattleTech.SensorLockSequence))]
-    [HarmonyPatch("ConsumesFiring", PropertyMethod.Getter)]
-    public static class BattleTech_SensorLockConsumesFiring_Prefix
+    [HarmonyPatch("CompleteOrders")]
+    public static class BattleTech_SensorPatchCompleteOrders_postfix
     {
-        static bool Prefix(SensorLockSequence __instance, ref bool __result)
+        static void Postfix(ref SensorLockSequence __instance)
         {
-            if (__instance == null)
-            {
-                throw new ArgumentNullException(nameof(__instance));
-            }
+            Mech mech = __instance.owningActor as Mech;
 
-            __result = false;
-            return false; //override
+            if(mech != null)
+            {
+                __instance.owningActor.ForceUnitOnePhaseUp(mech.GUID, __instance.RootSequenceGUID, true);
+            }
+          
         }
     }
-
-    [HarmonyPatch(typeof(BattleTech.SensorLockSequence))]
-    [HarmonyPatch("ConsumesFiring", PropertyMethod.Getter)]
-    public static class BattleTech_SensorLockConsumesFiring_Postfix
-    {
-        static void Postfix(SensorLockSequence __instance, ref bool __result)
-        {
-            if (__instance == null)
-            {
-                throw new ArgumentNullException(nameof(__instance));
-            }
-
-            if(__result)
-            {
-                __result = false;
-            }
-        }
-    }
-
 }
